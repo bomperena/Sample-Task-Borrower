@@ -14,50 +14,60 @@ class Handler extends ExceptionHandler
     protected $levels = [];
     protected $dontReport = [];
 
-    public function render($request, Throwable $e)
+    public function register(): void
     {
-        if ($request->is('api/*')) {
-            //Model not found (Borrower not found)
-            if ($e instanceof ModelNotFoundException) {
+        // Model not found (e.g., Borrower::findOrFail)
+        $this->renderable(function (ModelNotFoundException $e, $request) {
+            if ($request->is('api/*')) {
                 $model = class_basename($e->getModel());
+
                 return response()->json([
                     'status'  => 'error',
                     'message' => "{$model} not found"
                 ], 404);
             }
+        });
 
-            //Route not found (wrong endpoint)
-            if ($e instanceof NotFoundHttpException) {
+        // Route not found (bad endpoint, not a missing model)
+        $this->renderable(function (NotFoundHttpException $e, $request) {
+            if ($request->is('api/*')) {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'Resource not found'
                 ], 404);
             }
+        });
 
-            //Validation errors
-            if ($e instanceof ValidationException) {
+        // Validation errors
+        $this->renderable(function (ValidationException $e, $request) {
+            if ($request->is('api/*')) {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'Validation failed',
                     'errors'  => $e->errors()
                 ], 422);
             }
+        });
 
-            //Unauthenticated
-            if ($e instanceof AuthenticationException) {
+        // Unauthenticated
+        $this->renderable(function (AuthenticationException $e, $request) {
+            if ($request->is('api/*')) {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'Unauthenticated'
                 ], 401);
             }
+        });
 
-            //Catch-all (server error)
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Server error'
-            ], 500);
-        }
-
-        return parent::render($request, $e);
+        // Generic fallback
+        $this->renderable(function (Throwable $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Server error'
+                    // 'error' => $e->getMessage(), // Uncomment for debug
+                ], 500);
+            }
+        });
     }
 }
