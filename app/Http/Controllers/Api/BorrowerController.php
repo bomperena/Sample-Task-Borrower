@@ -36,18 +36,11 @@ class BorrowerController extends Controller
 
     /**
      * GET /api/borrowers/{id}
+     * Returns 404 automatically if not found (via Handler)
      */
     public function show(int $id): JsonResponse
     {
         $borrower = $this->service->getById($id);
-
-        if (!$borrower) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Borrower not found',
-            ], 404);
-        }
-
         return response()->json(['data' => $borrower], 200);
     }
 }
